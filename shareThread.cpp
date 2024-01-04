@@ -29,9 +29,10 @@ void ShareThread::run()
 
 void ShareThread::shareServer()
 {
-    // 使用 QFileInfo 获取文件名
+    // 使用 QFileInfo 获取文件基本信息
     QFileInfo fileInfo(filePath);
     QString fileName = fileInfo.fileName();
+    qint64 fileSize = fileInfo.size();
 
     // 获取C风格
     std::string std_fileName = fileName.toStdString();
@@ -117,9 +118,13 @@ void ShareThread::shareServer()
         for (int i = 0; i < tmpWriteSet.fd_count; i++)
         {
             // qDebug() << "文件名" << fileName << " " << fileName.toUtf8().length();
-            // 发送文件名给用户
-            if (::send(tmpWriteSet.fd_array[i], c_filename, strlen(c_filename), 0) == SOCKET_ERROR) {
-                emit updateInfo("文件名发送失败");
+            // 发送文件名、大小给用户
+            std::string std_send(c_filename);
+            std_send += '?'; //作分隔符
+            std_send += std::to_string(fileSize);
+            const char* c_send = std_send.c_str();
+            if (::send(tmpWriteSet.fd_array[i], c_send, strlen(c_send), 0) == SOCKET_ERROR) {
+                emit updateInfo("文件名、大小发送失败");
                 continue;
             }
             // 获取对应的地址信息
@@ -149,12 +154,17 @@ void ShareThread::shareServer()
 
 void ShareThread::sendFile(SOCKET clientSocket, const char* c_filePath)
 {
-    FILE* file = fopen(c_filePath, "rb");
-    if (!file) {
-        emit updateInfo("无法打开文件 : "+QString(c_filePath));
+    FILE* file;
+    errno_t err = fopen_s(&file, c_filePath, "rb");
+    if (err) {
+        if (err == ENOENT) {
+            emit updateInfo("文件不存在");
+        }
+        else {
+            emit updateInfo("无法打开文件，错误代码: "+QString::number(err));
+        }
         return;
     }
-
     char buffer[MAX_BUFFER_SIZE];  /* 设置发送的缓冲区大小 */
     int bytesRead;
 

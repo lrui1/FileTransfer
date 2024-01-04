@@ -33,6 +33,12 @@ private slots:
 
     void updateRecvInfoSlot(const QString &info); // 更新接收文件服务信息槽
 
+    void updateProgressBar(int percent); // 更新进度条槽
+
+    void on_clearRecvInfoButton_clicked();
+
+    void on_clearShareInfoButton_clicked();
+
 private:
     Ui::FileTransfer *ui;
     ShareThread *shareThread;

@@ -3,7 +3,8 @@
 RecvThread::RecvThread(const QString& ipAddress, quint16 port, QObject *parent)
     :ipAddress(ipAddress), port(port), QThread(parent)
 {
-
+    totalBytesReceived = 0;
+    totalBytesToReceive = -1;
 }
 
 RecvThread::~RecvThread()
@@ -78,16 +79,31 @@ void RecvThread::recvServer()
             return;
         }
 
-        // 从服务器获取文件名
-        char filename[MAX_FILENAME_SIZE];
-        int nRecv = ::recv(clientSocket, filename, sizeof(filename), 0);
+        // 从服务器获取文件名、大小
+        char fileInput[MAX_BUFFER_SIZE];
+        int nRecv = ::recv(clientSocket, fileInput, sizeof(fileInput), 0);
         if (nRecv > 0)
         {
-            filename[nRecv] = '\0';
+            fileInput[nRecv] = '\0';
         }
-        emit updateInfo("文件名为"+QString(filename));
+        QString input(fileInput);
+        QStringList parts = input.split('?');
+        if(parts.size() < 2)
+        {
+            emit updateInfo("无法找到文件名和大小");
+            break;
+        }
+        QString qFileName = parts[0];
+        QString qFileSize = parts[1];
+        // 转换C风格
+        std::string std_FileName = qFileName.toStdString();
+        std::string std_FileSize = qFileSize.toStdString();
+        const char* c_filename = std_FileName.c_str();
+        const char* c_filesize = std_FileSize.c_str();
+        totalBytesToReceive = std::atoi(c_filesize);
+        emit updateInfo("文件名为"+QString(c_filename)+", 大小为"+QString(c_filesize));
         emit updateInfo("正在接收······");
-        recvFile(clientSocket, filename);
+        recvFile(clientSocket, c_filename);
         emit updateInfo("接收完毕······\n");
         closesocket(clientSocket);
         stopThread(); // 停止线程
@@ -106,8 +122,24 @@ void RecvThread::recvFile(SOCKET clientSocket, const char* filename)
     int bytesReceived;
 
     while ((bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0)) > 0) {
+        // 写入文件，重新分配空间
         fwrite(buffer, 1, bytesReceived, file);
         memset(buffer, 0, MAX_BUFFER_SIZE);
+
+        // 计算百分比，更新信号
+        totalBytesReceived += bytesReceived;
+        int percent = calProgress();
+        emit updateProgress(percent);
+
     }
     fclose(file);
+}
+
+int RecvThread::calProgress()
+{
+    if (totalBytesToReceive > 0) {
+        return static_cast<int>((totalBytesReceived * 100) / totalBytesToReceive);
+    } else {
+        return 0; // 避免除以零错误
+    }
 }

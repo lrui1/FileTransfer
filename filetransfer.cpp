@@ -22,8 +22,10 @@ void FileTransfer::on_connetButton_clicked()
 {
     QString ipAddress = ui->ipAddress->text();
     quint16 port = ui->remotePort->value();
+    ui->progressBar->setValue(0); //进度条归0
     recvThread = new RecvThread(ipAddress, port, this);
     connect(recvThread, &RecvThread::updateInfo, this, &FileTransfer::updateRecvInfoSlot);
+    connect(recvThread, &RecvThread::updateProgress, this, &FileTransfer::updateProgressBar); //连接信号和槽
     connect(recvThread, &RecvThread::finished, recvThread, &QObject::deleteLater); // 自动释放线程
     recvThread->start();
 }
@@ -66,5 +68,23 @@ void FileTransfer::updateShareInfoSlot(const QString &info)
 void FileTransfer::updateRecvInfoSlot(const QString &info)
 {
     ui->recvInfo->append(info);
+}
+
+void FileTransfer::updateProgressBar(int percent)
+{
+    // 更新进度条
+    ui->progressBar->setValue(percent);
+}
+
+
+void FileTransfer::on_clearRecvInfoButton_clicked()
+{
+    ui->recvInfo->setText("");
+}
+
+
+void FileTransfer::on_clearShareInfoButton_clicked()
+{
+    ui->shareInfo->setText("");
 }
 

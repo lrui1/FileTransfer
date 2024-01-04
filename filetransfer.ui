@@ -95,7 +95,7 @@
            <item>
             <widget class="QProgressBar" name="progressBar">
              <property name="value">
-              <number>24</number>
+              <number>0</number>
              </property>
             </widget>
            </item>
@@ -117,6 +117,13 @@
             <widget class="QPushButton" name="closeButton">
              <property name="text">
               <string>关闭连接</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="clearRecvInfoButton">
+             <property name="text">
+              <string>清除日志</string>
              </property>
             </widget>
            </item>
@@ -149,7 +156,7 @@
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>文件全路径</string>
+            <string>文件全路径(不含中文)</string>
            </property>
           </widget>
          </item>
@@ -226,6 +233,13 @@
             <widget class="QPushButton" name="shutService">
              <property name="text">
               <string>关闭服务</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="clearShareInfoButton">
+             <property name="text">
+              <string>清除日志</string>
              </property>
             </widget>
            </item>
