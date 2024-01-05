@@ -1,5 +1,7 @@
 #include "recvthread.h"
 
+#include <QRegularExpressionValidator>
+
 RecvThread::RecvThread(const QString& ipAddress, quint16 port, QObject *parent)
     :ipAddress(ipAddress), port(port), QThread(parent)
 {
@@ -15,7 +17,7 @@ RecvThread::~RecvThread()
 void RecvThread::stopThread()
 {
     stopFlag = true;
-    emit updateInfo("等待10s后关闭服务");
+    // emit updateInfo("等待10s后关闭服务");
 }
 
 void RecvThread::run()
@@ -53,61 +55,34 @@ void RecvThread::recvServer()
 
     emit updateInfo("连接"+ipAddress+"成功!");
 
-    // 设置等待时间为5秒
-    timeval timeout;
-    timeout.tv_sec = 10;  // 秒
-    timeout.tv_usec = 0; // 微秒
-
-    // 使用fd_set设置
-    fd_set readSet;
-    FD_ZERO(&readSet);
-    FD_SET(clientSocket, &readSet);
-
-    // 执行任务，确保在循环中检查 stopFlag
-    while (!stopFlag)
+    // 从服务器获取文件名、大小
+    char fileInput[MAX_BUFFER_SIZE];
+    int nRecv = ::recv(clientSocket, fileInput, sizeof(fileInput), 0);
+    if (nRecv > 0)
     {
-        FD_SET tmpReadSet = readSet;
-        int res = select(0, &tmpReadSet, NULL, NULL, &timeout);
-        if (res == SOCKET_ERROR)
-        {
-            emit updateInfo("select() failed: "+QString::number(WSAGetLastError()));
-            return;
-        }
-        else if(res == 0)
-        {
-            emit updateInfo("等待时间超过10s, 超出等待时间限制");
-            return;
-        }
-
-        // 从服务器获取文件名、大小
-        char fileInput[MAX_BUFFER_SIZE];
-        int nRecv = ::recv(clientSocket, fileInput, sizeof(fileInput), 0);
-        if (nRecv > 0)
-        {
-            fileInput[nRecv] = '\0';
-        }
-        QString input(fileInput);
-        QStringList parts = input.split('?');
-        if(parts.size() < 2)
-        {
-            emit updateInfo("无法找到文件名和大小");
-            break;
-        }
-        QString qFileName = parts[0];
-        QString qFileSize = parts[1];
-        // 转换C风格
-        std::string std_FileName = qFileName.toStdString();
-        std::string std_FileSize = qFileSize.toStdString();
-        const char* c_filename = std_FileName.c_str();
-        const char* c_filesize = std_FileSize.c_str();
-        totalBytesToReceive = std::atoi(c_filesize);
-        emit updateInfo("文件名为"+QString(c_filename)+", 大小为"+QString(c_filesize));
-        emit updateInfo("正在接收······");
-        recvFile(clientSocket, c_filename);
-        emit updateInfo("接收完毕······\n");
-        closesocket(clientSocket);
-        stopThread(); // 停止线程
+        fileInput[nRecv] = '\0';
     }
+    QString input(fileInput);
+    QStringList parts = input.split('?');
+    if(parts.size() < 2)
+    {
+        emit updateInfo("无法找到文件名和大小");
+        return;
+    }
+    QString qFileName = parts[0];
+    QString qFileSize = parts[1];
+
+    // 转换C风格
+    std::string std_FileName = qFileName.toStdString();
+    std::string std_FileSize = qFileSize.toStdString();
+    const char* c_filename = std_FileName.c_str();
+    const char* c_filesize = std_FileSize.c_str();
+    totalBytesToReceive = std::atoi(c_filesize);
+    emit updateInfo("文件名为"+QString(c_filename)+", 大小为"+QString(c_filesize));
+    emit updateInfo("正在接收······");
+    recvFile(clientSocket, c_filename);
+    emit updateInfo("接收完毕······\n");
+    closesocket(clientSocket);
 }
 
 void RecvThread::recvFile(SOCKET clientSocket, const char* filename)

@@ -16,7 +16,7 @@ ShareThread::~ShareThread()
 void ShareThread::stopThread()
 {
     stopFlag = true;
-    emit updateInfo("等待10s后关闭服务");
+    // emit updateInfo("等待10s后关闭服务");
 }
 
 void ShareThread::run()
@@ -90,7 +90,7 @@ void ShareThread::shareServer()
         fd_set tmpWriteSet = writeSet;
 
         // 运行select函数，选择响应套接字
-        int res = select(0, &tmpReadSet, &tmpWriteSet, NULL, &timeout);
+        int res = select(0, &tmpReadSet, &tmpWriteSet, NULL, NULL);
         if (res == SOCKET_ERROR)
         {
             emit updateInfo("select() failed: "+QString::number(WSAGetLastError()));
@@ -127,6 +127,7 @@ void ShareThread::shareServer()
                 emit updateInfo("文件名、大小发送失败");
                 continue;
             }
+
             // 获取对应的地址信息
             sockaddr_in clientAddr;
             int clientAddrLen = sizeof(clientAddr);

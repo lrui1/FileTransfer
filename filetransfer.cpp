@@ -76,12 +76,10 @@ void FileTransfer::updateProgressBar(int percent)
     ui->progressBar->setValue(percent);
 }
 
-
 void FileTransfer::on_clearRecvInfoButton_clicked()
 {
     ui->recvInfo->setText("");
 }
-
 
 void FileTransfer::on_clearShareInfoButton_clicked()
 {
